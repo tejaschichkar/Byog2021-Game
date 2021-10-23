@@ -1,5 +1,6 @@
 import pygame
 
+
 class Game:
     def __init__(self, surf):
         self.surf = surf
