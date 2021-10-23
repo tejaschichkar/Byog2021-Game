@@ -1,5 +1,36 @@
 import pygame
 import os
+import random
+
+
+class Enemy:
+    def __init__(self, surf):
+        self.surf = surf
+        self.running_images = []
+        self.standing_images = []
+        self.moving = False
+        self.standing = True
+        for i in range(1, 6):
+            self.running_images.append(
+                pygame.transform.scale(pygame.image.load(
+                    os.path.join("assets", "enemy", "running", f"scifi_alien_run_{i}.png")), (200, 100)))
+        for i in range(1, 3):
+            self.standing_images.append(
+                pygame.transform.scale(pygame.image.load(
+                    os.path.join("assets", "enemy", "standing", f"scifi_alien_idle_{i}.png")), (200, 100)))
+        self.lane = random.choice(["left", "right"])
+        self.running_image_index = 0
+        self.standing_image_index = 0
+        self.image = self.standing_images[self.standing_image_index]
+
+    def draw(self):
+        y = 100 if self.lane == "left" else 300
+        if self.standing:
+            self.standing_image_index = (self.standing_image_index + 1) % len(self.standing_images)
+            self.image = self.standing_images[self.standing_image_index]
+        elif self.moving:
+            pass
+        self.surf.blit(self.image, (200, y))
 
 
 class Player:
@@ -51,6 +82,7 @@ class Game:
         self.pressed_left = False
         self.pressed_right = False
         self.lane = "right"
+        self.enemy = Enemy(self.surf)
 
     def draw(self):
         if self.pressed_left:
@@ -80,10 +112,11 @@ class Game:
                              (0, self.surf.get_rect().h // 2, self.surf.get_rect().w, self.surf.get_rect().h // 2), 3)
         elif self.lane == "left":
             pygame.draw.rect(self.surf, "green", (0, 0, self.surf.get_rect().w, self.surf.get_rect().h // 2), 3)
+        self.enemy.draw()
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
+            if event.key == pygame.K_UP:
                 self.lane = "left" if self.lane == "right" else "right"
             elif event.key in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_a, pygame.K_d]:
                 self.left_player.moving = True

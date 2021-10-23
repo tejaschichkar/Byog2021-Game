@@ -1,7 +1,7 @@
 import pygame
 from game import Game
 
-WIDTH = 700
+WIDTH = 900
 HEIGHT = 600
 
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
