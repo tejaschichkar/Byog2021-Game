@@ -10,23 +10,39 @@ def check_collision(obj1, obj2):
 
 
 class Bullet:
-    def __init__(self, surf):
+    def __init__(self, surf, remove_bullet):
         self.surf = surf
         self.images = []
+        self.hit_images = []
         for i in range(1, 3):
             self.images.append(
                 pygame.transform.scale(pygame.image.load(
                     os.path.join("assets", "bullet", f"scifi_blasterfire_{i}.png")), (28, 5)))
+        for i in range(1, 5):
+            self.hit_images.append(
+                pygame.transform.scale(pygame.image.load(
+                    os.path.join("assets", "bullet", "hit", f"scifi_blasterimpact_{i}.png")), (38, 56)))
         self.image_index = 0
+        self.hit_image_index = 0
         self.image = self.images[self.image_index]
+        self.hit = False
         self.x = 0
         self.drawn_once = False
         self.mask = pygame.mask.from_surface(self.image)
         self.y = 0
+        self.remove_bullet = remove_bullet
 
     def draw(self, x, y):
-        self.image_index = (self.image_index + 1) % len(self.images)
-        self.image = self.images[self.image_index]
+        if self.hit:
+            self.hit_image_index += 1
+            if self.hit_image_index > len(self.hit_images) - 1:
+                self.remove_bullet(self)
+                self.hit = False
+            else:
+                self.image = self.hit_images[self.hit_image_index]
+        else:
+            self.image_index = (self.image_index + 1) % len(self.images)
+            self.image = self.images[self.image_index]
         self.mask = pygame.mask.from_surface(self.image)
         self.x = x
         self.y = y
@@ -143,15 +159,21 @@ class Player:
                 bullet_copy.remove(bullet)
                 continue
             if bullet.drawn_once:
-                bullet.x += 20
+                if not bullet.hit:
+                    bullet.x += 20
                 bullet.draw(bullet.x, y + 90)
             else:
                 bullet.draw(x + 105, y + 90)
                 bullet.drawn_once = True
         self.bullets = bullet_copy
 
+    def remove_bullet(self, bullet):
+        temp_bullets = self.bullets
+        temp_bullets.remove(bullet)
+        self.bullets = temp_bullets
+
     def shoot(self):
-        bullet = Bullet(self.surf)
+        bullet = Bullet(self.surf, self.remove_bullet)
         self.bullets.append(bullet)
         self.shooting = True
 
@@ -200,7 +222,6 @@ class Game:
                 self.right_player.moving = False
                 self.right_player.standing = True
         self.surf.blit(self.bg_img, (0, 0))
-        pygame.draw.rect(self.surf, "white", (0, self.surf.get_rect().h // 2, self.surf.get_rect().w, 3))
         self.left_player.draw(self.player_x)
         self.right_player.draw(self.player_x)
         for enemy in self.enemies:
@@ -208,31 +229,28 @@ class Game:
                 enemy.move()
             enemy.draw()
 
+        pygame.draw.rect(self.surf, "white", (0, self.surf.get_rect().h // 2, self.surf.get_rect().w, 3))
         if self.lane == "right":
             pygame.draw.rect(self.surf, "green",
                              (0, self.surf.get_rect().h // 2, self.surf.get_rect().w, self.surf.get_rect().h // 2), 3)
         elif self.lane == "left":
             pygame.draw.rect(self.surf, "green", (0, 0, self.surf.get_rect().w, self.surf.get_rect().h // 2), 3)
-        temp_bullets = self.left_player.bullets
         for bullet in self.left_player.bullets:
             for enemy in self.enemies:
                 if not enemy.dying:
                     if check_collision(enemy, bullet):
-                        temp_bullets.remove(bullet)
+                        bullet.hit = True
                         enemy.dying = True
                         enemy.standing = False
                         enemy.moving = False
-        self.left_player.bullets = temp_bullets
-        temp_bullets = self.right_player.bullets
         for bullet in self.right_player.bullets:
             for enemy in self.enemies:
                 if not enemy.dying:
                     if check_collision(enemy, bullet):
-                        temp_bullets.remove(bullet)
+                        bullet.hit = True
                         enemy.dying = True
                         enemy.standing = False
                         enemy.moving = False
-        self.right_player.bullets = temp_bullets
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
