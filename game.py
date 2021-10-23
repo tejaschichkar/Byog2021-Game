@@ -50,6 +50,7 @@ class Game:
         self.player_speed = 10
         self.pressed_left = False
         self.pressed_right = False
+        self.lane = "right"
 
     def draw(self):
         if self.pressed_left:
@@ -74,25 +75,32 @@ class Game:
         pygame.draw.rect(self.surf, "white", (0, self.surf.get_rect().h // 2, self.surf.get_rect().w, 3))
         self.left_player.draw(self.player_x)
         self.right_player.draw(self.player_x)
+        if self.lane == "right":
+            pygame.draw.rect(self.surf, "green",
+                             (0, self.surf.get_rect().h // 2, self.surf.get_rect().w, self.surf.get_rect().h // 2), 3)
+        elif self.lane == "left":
+            pygame.draw.rect(self.surf, "green", (0, 0, self.surf.get_rect().w, self.surf.get_rect().h // 2), 3)
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+            if event.key == pygame.K_SPACE:
+                self.lane = "left" if self.lane == "right" else "right"
+            elif event.key in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_a, pygame.K_d]:
                 self.left_player.moving = True
                 self.left_player.standing = False
                 self.right_player.moving = True
                 self.right_player.standing = False
-                if event.key == pygame.K_LEFT:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                     self.pressed_left = True
-                elif event.key == pygame.K_RIGHT:
+                elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                     self.pressed_right = True
         elif event.type == pygame.KEYUP:
-            if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+            if event.key in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_a, pygame.K_d]:
                 self.left_player.moving = False
                 self.left_player.standing = True
                 self.right_player.moving = False
                 self.right_player.standing = True
-                if event.key == pygame.K_LEFT:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                     self.pressed_left = False
-                elif event.key == pygame.K_RIGHT:
+                elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                     self.pressed_right = False
