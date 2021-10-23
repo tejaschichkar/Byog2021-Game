@@ -7,9 +7,11 @@ WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 
 pygame.display.set_caption("BYOG 2021 Game")
 
+
 def redraw_screen():
     WIN.fill("white")
     pygame.display.flip()
+
 
 def main():
     running = True
@@ -19,5 +21,6 @@ def main():
                 running = False
         redraw_screen()
     pygame.quit()
+
 
 main()
