@@ -1,14 +1,14 @@
 import pygame
 from game import Game
 
+pygame.init()
+
 WIDTH = 900
 HEIGHT = 600
 
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 
 pygame.display.set_caption("BYOG 2021 Game")
-
-game = Game(WIN, WIDTH, HEIGHT)
 
 
 def redraw_screen():
@@ -18,8 +18,13 @@ def redraw_screen():
 
 
 def main():
+    global game
+
     running = True
     clock = pygame.time.Clock()
+    ADD_ENEMY = pygame.USEREVENT + 1
+    pygame.time.set_timer(ADD_ENEMY, 1500, 1)
+    game = Game(WIN, WIDTH, HEIGHT, ADD_ENEMY)
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
