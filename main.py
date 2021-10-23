@@ -26,7 +26,7 @@ def main():
                 running = False
             game.on_event(event)
         redraw_screen()
-        # clock.tick(500)
+        clock.tick(15)
     pygame.quit()
 
 

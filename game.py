@@ -1,4 +1,39 @@
 import pygame
+import os
+
+
+class Player:
+    def __init__(self, surf, direction):
+        self.surf = surf
+        self.direction = direction
+        self.running_images = []
+        self.standing_images = []
+        for i in range(1, 7):
+            self.running_images.append(
+                pygame.transform.scale(pygame.image.load(
+                    os.path.join("assets", "player", "running", direction, f"scifi_marine_run_{i}.png")), (150, 150)))
+        for i in range(1, 3):
+            self.standing_images.append(
+                pygame.transform.scale(pygame.image.load(
+                    os.path.join("assets", "player", "standing", direction, f"scifi_marine_stand_{i}.png")),
+                    (150, 150)))
+        self.running_image_index = 0
+        self.standing_image_index = 0
+        self.image = self.standing_images[self.standing_image_index]
+        self.moving = False
+        self.standing = True
+
+    def draw(self, x):
+        if self.standing:
+            self.standing_image_index = (self.standing_image_index + 1) % len(self.standing_images)
+            self.image = self.standing_images[self.standing_image_index]
+        elif self.moving:
+            self.running_image_index = (self.running_image_index + 1) % len(self.running_images)
+            self.image = self.running_images[self.running_image_index]
+        if self.direction == "left":
+            self.surf.blit(self.image, (x, 100))
+        else:
+            self.surf.blit(self.image, (x, 300))
 
 
 class Game:
@@ -8,35 +43,56 @@ class Game:
         self.win_width = win_width
         self.win_height = win_height
         self.player_x = 20
-        self.left_player = pygame.Rect(self.player_x, 50, 50, 50)
-        self.player_width = 50
-        self.player_height = 50
-        self.speed = 4
+        self.left_player = Player(self.surf, "left")
+        self.right_player = Player(self.surf, "right")
+        self.player_width = self.left_player.image.get_rect().w
+        self.player_height = self.left_player.image.get_rect().h
+        self.player_speed = 10
         self.pressed_left = False
         self.pressed_right = False
 
     def draw(self):
         if self.pressed_left:
-            self.player_x -= self.speed
+            self.player_x -= self.player_speed
         elif self.pressed_right:
-            self.player_x += self.speed
+            self.player_x += self.player_speed
         if self.player_x < 0:
             self.player_x = 0
+            if self.left_player.moving:
+                self.left_player.moving = False
+                self.left_player.standing = True
+                self.right_player.moving = False
+                self.right_player.standing = True
         if self.player_x > self.win_width - self.player_width:
             self.player_x = self.win_width - self.player_width
-        self.left_player = pygame.Rect(self.player_x, 50, 50, 50)
+            if self.left_player.moving:
+                self.left_player.moving = False
+                self.left_player.standing = True
+                self.right_player.moving = False
+                self.right_player.standing = True
         self.surf.blit(self.bg_img, (0, 0))
         pygame.draw.rect(self.surf, "white", (0, self.surf.get_rect().h // 2, self.surf.get_rect().w, 3))
-        pygame.draw.rect(self.surf, "white", self.left_player)
+        self.left_player.draw(self.player_x)
+        self.right_player.draw(self.player_x)
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                self.pressed_left = True
-            elif event.key == pygame.K_RIGHT:
-                self.pressed_right = True
+            if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+                self.left_player.moving = True
+                self.left_player.standing = False
+                self.right_player.moving = True
+                self.right_player.standing = False
+                if event.key == pygame.K_LEFT:
+                    self.pressed_left = True
+                elif event.key == pygame.K_RIGHT:
+                    self.pressed_right = True
         elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT:
-                self.pressed_left = False
-            elif event.key == pygame.K_RIGHT:
-                self.pressed_right = False
+            if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+                self.left_player.moving = False
+                self.left_player.standing = True
+                self.right_player.moving = False
+                self.right_player.standing = True
+                if event.key == pygame.K_LEFT:
+                    self.pressed_left = False
+                elif event.key == pygame.K_RIGHT:
+                    self.pressed_right = False
