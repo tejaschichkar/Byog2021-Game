@@ -34,12 +34,14 @@ class Bullet:
 
 
 class Enemy:
-    def __init__(self, surf):
+    def __init__(self, surf, remove_enemy):
         self.surf = surf
         self.running_images = []
         self.standing_images = []
+        self.dying_images = []
         self.moving = True
         self.standing = False
+        self.dying = False
         for i in range(1, 6):
             self.running_images.append(
                 pygame.transform.scale(pygame.image.load(
@@ -51,13 +53,19 @@ class Enemy:
             self.standing_images.append(
                 pygame.transform.scale(pygame.image.load(
                     os.path.join("assets", "enemy", "standing", f"scifi_alien_idle_{i}.png")), (200, 100)))
+        for i in range(1, 6):
+            self.dying_images.append(
+                pygame.transform.scale(pygame.image.load(
+                    os.path.join("assets", "enemy", "dying", f"scifi_alien_die_{i}.png")), (200, 100)))
         self.lane = random.choice(["left", "right"])
         self.running_image_index = 0
         self.standing_image_index = 0
+        self.dying_image_index = 0
         self.image = self.standing_images[self.standing_image_index]
         self.mask = pygame.mask.from_surface(self.image)
         self.x = self.surf.get_rect().w
         self.y = 150 if self.lane == "left" else 350
+        self.remove_enemy = remove_enemy
 
     def draw(self):
         if self.standing:
@@ -66,6 +74,12 @@ class Enemy:
         elif self.moving:
             self.running_image_index = (self.running_image_index + 1) % len(self.running_images)
             self.image = self.running_images[self.running_image_index]
+        elif self.dying:
+            self.dying_image_index += 1
+            if self.dying_image_index > len(self.dying_images) - 1:
+                self.remove_enemy(self)
+                return
+            self.image = self.dying_images[self.dying_image_index]
         self.mask = pygame.mask.from_surface(self.image)
         self.surf.blit(self.image, (self.x, self.y))
 
@@ -79,6 +93,7 @@ class Player:
         self.direction = direction
         self.running_images = []
         self.standing_images = []
+        self.shooting_images = []
         for i in range(1, 7):
             self.running_images.append(
                 pygame.transform.scale(pygame.image.load(
@@ -92,16 +107,30 @@ class Player:
                 pygame.transform.scale(pygame.image.load(
                     os.path.join("assets", "player", "standing", direction, f"scifi_marine_stand_{i}.png")),
                     (150, 150)))
+        for i in range(1, 3):
+            self.shooting_images.append(
+                pygame.transform.scale(pygame.image.load(
+                    os.path.join("assets", "player", "shooting", direction, f"scifi_marine_shoot_{i}.png")),
+                    (150, 150)))
         self.running_image_index = 0
         self.standing_image_index = 0
+        self.shooting_image_index = -1
         self.image = self.standing_images[self.standing_image_index]
         self.moving = False
         self.standing = True
+        self.shooting = False
         self.bullets = []
 
     def draw(self, x):
         y = 100 if self.direction == "left" else 300
-        if self.standing:
+        if self.shooting:
+            self.shooting_image_index += 1
+            if self.shooting_image_index > len(self.shooting_images) - 1:
+                self.shooting_image_index = -1
+                self.shooting = False
+            else:
+                self.image = self.shooting_images[self.shooting_image_index]
+        elif self.standing:
             self.standing_image_index = (self.standing_image_index + 1) % len(self.standing_images)
             self.image = self.standing_images[self.standing_image_index]
         elif self.moving:
@@ -124,6 +153,7 @@ class Player:
     def shoot(self):
         bullet = Bullet(self.surf)
         self.bullets.append(bullet)
+        self.shooting = True
 
 
 class Game:
@@ -144,6 +174,11 @@ class Game:
         self.enemies = []
         self.add_enemy_event = add_enemy_event
         self.added_first_enemy = False
+
+    def remove_enemy(self, enemy):
+        temp_enemies = self.enemies
+        temp_enemies.remove(enemy)
+        self.enemies = temp_enemies
 
     def draw(self):
         if self.pressed_left:
@@ -169,7 +204,8 @@ class Game:
         self.left_player.draw(self.player_x)
         self.right_player.draw(self.player_x)
         for enemy in self.enemies:
-            enemy.move()
+            if not enemy.dying:
+                enemy.move()
             enemy.draw()
 
         if self.lane == "right":
@@ -178,23 +214,25 @@ class Game:
         elif self.lane == "left":
             pygame.draw.rect(self.surf, "green", (0, 0, self.surf.get_rect().w, self.surf.get_rect().h // 2), 3)
         temp_bullets = self.left_player.bullets
-        temp_enemies = self.enemies
         for bullet in self.left_player.bullets:
             for enemy in self.enemies:
-                if check_collision(enemy, bullet):
-                    temp_bullets.remove(bullet)
-                    temp_enemies.remove(enemy)
+                if not enemy.dying:
+                    if check_collision(enemy, bullet):
+                        temp_bullets.remove(bullet)
+                        enemy.dying = True
+                        enemy.standing = False
+                        enemy.moving = False
         self.left_player.bullets = temp_bullets
-        self.enemies = temp_enemies
         temp_bullets = self.right_player.bullets
-        temp_enemies = self.enemies
         for bullet in self.right_player.bullets:
             for enemy in self.enemies:
-                if check_collision(enemy, bullet):
-                    temp_bullets.remove(bullet)
-                    temp_enemies.remove(enemy)
+                if not enemy.dying:
+                    if check_collision(enemy, bullet):
+                        temp_bullets.remove(bullet)
+                        enemy.dying = True
+                        enemy.standing = False
+                        enemy.moving = False
         self.right_player.bullets = temp_bullets
-        self.enemies = temp_enemies
 
     def on_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -208,8 +246,10 @@ class Game:
             elif event.key in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_a, pygame.K_d]:
                 self.left_player.moving = True
                 self.left_player.standing = False
+                self.left_player.shooting = False
                 self.right_player.moving = True
                 self.right_player.standing = False
+                self.right_player.shooting = False
                 if event.key == pygame.K_LEFT or event.key == pygame.K_a:
                     self.pressed_left = True
                 elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
@@ -226,4 +266,4 @@ class Game:
             if not self.added_first_enemy:
                 self.added_first_enemy = True
                 pygame.time.set_timer(self.add_enemy_event, 3500)
-            self.enemies.append(Enemy(self.surf))
+            self.enemies.append(Enemy(self.surf, self.remove_enemy))
